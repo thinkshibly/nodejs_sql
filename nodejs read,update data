@@ -9,86 +9,199 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 var mysql = require('mysql');
-
+var f_time;
+var timeval=0;
 var con = mysql.createConnection({
-    host: '157.245.58.124',
-    user: 'shibly_user',
-    password: 'Shibly@159',
-    database: 'shibly_test_db'
+  host: '157.245.58.124',
+  user: 'shibly_user',
+  password: 'Shibly@159',
+  database: 'shibly_test_db'
 });
 
 
-con.connect(function(err) {
+con.connect(function (err) {
   if (err) throw err;
   console.log("database is connected ");
 });
 
 
- app.use(function (req, res) {
+app.use(function (req, res) {
 
-    con.query("select  * from generator_monitoring2  where device_id='"+(req.body.device_id)+"' order by id desc limit 1 ", function (err, result) {
-        if (err) throw err;
-        console.log("api call");
+  var obj = {
 
-      if((result[0].status)!=(req.body.status))
-      {
-        if((req.body.status)==1)
-        {
-        const timestamp = Math.round(new Date() / 1000); 
-        console.log("device on ");
-       var sql = "INSERT INTO generator_monitoring2 (device_id, start_time,end_time,status) VALUES ('"+(req.body.device_id)+"','"+timestamp+"','0',1)";
-       con.query(sql, function (err, result) {
-         if (err) throw err;
+    "device_id": "0001",
+    "dev_status": 0,
+    "total_time": 0,
+    "dev_time": 0
 
-         console.log("1 record inserted");
-         res.setHeader('Content-Type', 'text/plain')
-         res.write('you posted:\n')
-         res.end(JSON.stringify(req.body, null, 2))
-       });
-      }
+  };
 
-      else{
+  con.query("select  * from generator_monitoring2  where device_id='" + (req.body.device_id) + "' order by id desc limit 1 ", function (err, result) {
+    if (err) throw err;
+    console.log("api call");
 
-        const timestamp = Math.round(new Date() / 1000); 
-        console.log("device off");
-        var timeval=timestamp-((result[0].start_time));
-
-       var sql = "UPDATE generator_monitoring2 SET end_time = "+timestamp+", status=0, time="+timeval+" WHERE device_id = '"+(req.body.device_id)+"'   ORDER BY id DESC limit 1";
-      console.log(sql);
-       con.query(sql, function (err, result) {
-         if (err) throw err;
-         console.log("record update successfull");
-         res.setHeader('Content-Type', 'text/plain')
-         res.write('you posted:\n')
-         res.end(JSON.stringify(req.body, null, 2))
-       });
-
-      }
-
-
-
-    }
-
-    else{
-        console.log("not working");
-
-      
-        res.end(JSON.stringify(req.body, null, 2))
-    }
-
-      });
+    console.log((result[0].dev_status));
+    console.log((req.body.dev_status));
+   total_time=(result[0].total_time);
     
-     console.log("first2");
 
-   
- });
+    if ((result[0].dev_status) != (req.body.dev_status)) {
+      if ((req.body.dev_status) == 1) {
+        const timestamp = Math.round(new Date() / 1000);
+        console.log("device on ");
+        var sql = "INSERT INTO generator_monitoring2 (device_id, start_time,end_time,dev_status,total_time) VALUES ('" + (req.body.device_id) + "','" + timestamp + "','" + timestamp + "',1,'" + (result[0].total_time) + "')";
+        con.query(sql, function (err, result) {
+          if (err) throw err;
+
+          console.log("1 record inserted");
+          res.setHeader('Content-Type', 'text/plain')
+          obj.device_id = req.body.device_id;
+          obj.device_status = 1;
+          obj.dev_time = timeval;
+
+          add(total_time);
+          console.log(f_time);
+          console.log(total_time);
+          obj.total_time = f_time;
+          res.end(JSON.stringify(obj, null, 2))
+        });
+      }
+
+      else {
+
+        const timestamp = Math.round(new Date() / 1000);
+        console.log("device off");
+        var timeval = timestamp - ((result[0].start_time));
+
+        var sql = "UPDATE generator_monitoring2 SET end_time = " + timestamp + ", dev_status=0, dev_time=" + timeval + ",total_time=" + (timeval + (result[0].total_time)) + " WHERE device_id = '" + (req.body.device_id) + "'   ORDER BY id DESC limit 1";
+        console.log(sql);
+        con.query(sql, function (err, result) {
+          if (err) throw err;
+          console.log("record update successfull");
+          res.setHeader('Content-Type', 'text/plain')
+          obj.device_id = req.body.device_id;
+          obj.device_status = 2;
+          obj.dev_time = timeval;
+          add(total_time);
+          console.log(f_time);
+          console.log(total_time);
+        obj.total_time = f_time;
+          res.end(JSON.stringify(obj, null, 2))
+        });
+
+      }
 
 
 
+    }
 
-  app.listen(port, function() {
-    console.log(`Example app listening on port ${port}!`)
+
+
+    else if ((result[0].dev_status) == 1 && (req.body.dev_status) == 1) {
+
+      const timestamp = Math.round(new Date() / 1000);
+      console.log("device on update data ");
+      var timeval = timestamp - ((result[0].start_time));
+      console.log(timeval);
+
+      console.log((result[0].total_time));
+      var total_time = timeval + (result[0].total_time);
+      console.log(total_time);
+
+      var sql = "UPDATE generator_monitoring2 SET end_time = " + timestamp + ",start_time = " + timestamp + ",   dev_time=" + timeval + ",total_time=" + total_time + " WHERE device_id = '" + (req.body.device_id) + "'   ORDER BY id DESC limit 1";
+      console.log(sql);
+      con.query(sql, function (err, result) {
+        if (err) throw err;
+        console.log("record update successfull");
+        res.setHeader('Content-Type', 'text/plain')
+
+        obj.device_id = req.body.device_id;
+        obj.device_status = 3;
+        obj.dev_time = timeval;
+
+        add(total_time);
+        console.log(f_time);
+        console.log(total_time);
+        obj.total_time = f_time;
+        res.end(JSON.stringify(obj, null, 2))
+      });
+
+    }
+    else {
+      console.log("not working");
+
+
+      res.end(JSON.stringify(req.body, null, 2))
+    }
+
   });
 
+  console.log("first2");
+
+
+});
+
+function add(total_time)
+{
+  if(total_time>3600)
+  {
+     h=Math.floor(total_time/3600);
+     if(h<10)
+     {
+        f_time='0'+h+'H_'; 
+     }
+     else{
+        f_time=h+'H_';    
+     }
+     m=Math.floor((total_time-(h*3600))/60);  
+     if(m==null)
+     {
+      f_time+='0'+m+'M';   
+
+     }
+
+
+     else{
+
+
+
+    
+     
+     if(m<10)
+     {
+        f_time+='0'+m+'M';    
+     }
+     else{
+      
+        f_time+=m+'M';     
+     }
+
+    }
+
+
+    
+  }
+  
+  else
+  {
+       f_time="00H_"
+         m=Math.floor(total_time/60);    
+     if(m<10)
+     {
+        f_time+='0'+m+'M';    
+     }
+     else{
+        f_time+=m+'M';     
+     }
+   
+   
+  }
+
+}
+
+
+app.listen(port, function () {
+  console.log(`Example app listening on port ${port}!`)
+});
 
 
